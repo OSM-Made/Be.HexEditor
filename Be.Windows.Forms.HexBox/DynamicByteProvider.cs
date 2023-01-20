@@ -130,8 +130,9 @@ namespace Be.Windows.Forms
 		/// <param name="index">the start index of the bytes in the byte collection</param>
 		/// <param name="bs">the byte array to insert</param>
 		public void InsertBytes(long index, byte[] bs)
-		{ 
-			_bytes.InsertRange((int)index, bs); 
+		{
+            _bytes.RemoveRange((int)index, bs.Length);
+            _bytes.InsertRange((int)index, bs); 
 
 			OnLengthChanged(EventArgs.Empty);
 			OnChanged(EventArgs.Empty);

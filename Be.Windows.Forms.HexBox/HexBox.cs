@@ -649,7 +649,15 @@ namespace Be.Windows.Forms
 
 			protected virtual bool PreProcessWmKeyDown_ControlV(ref Message m)
 			{
-				_hexBox.Paste();
+				try
+				{
+                    _hexBox.Paste();
+                }
+				catch
+				{
+
+				}
+				
 				return true;
 			}
 
@@ -1378,8 +1386,6 @@ namespace Be.Windows.Forms
 		{
 			this._vScrollBar = new VScrollBar();
 			this._vScrollBar.Scroll += new ScrollEventHandler(_vScrollBar_Scroll);
-
-			this._builtInContextMenu = new BuiltInContextMenu(this);
 
 			BackColor = Color.White;
             Font = SystemFonts.MessageBoxFont;
@@ -2438,7 +2444,8 @@ namespace Be.Windows.Forms
 
 		void PaintHex(Graphics g, long startByte, long endByte)
 		{
-			Brush brush = new SolidBrush(GetDefaultForeColor());
+            Brush changedBrush = new SolidBrush(_changedForeColor);
+            Brush brush = new SolidBrush(GetDefaultForeColor());
 			Brush selBrush = new SolidBrush(_selectionForeColor);
 			Brush selBrushBack = new SolidBrush(_selectionBackColor);
 
@@ -2452,16 +2459,32 @@ namespace Be.Windows.Forms
 				counter++;
 				Point gridPoint = GetGridBytePoint(counter);
 				byte b = _byteProvider.ReadByte(i);
+				byte b2 = _prevByteProvider == null || _prevByteProvider.Length <= 0 ? b : _prevByteProvider.ReadByte(i);
 
-				bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
+
+                bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
 
 				if (isSelectedByte && isKeyInterpreterActive)
 				{
-					PaintHexStringSelected(g, b, selBrush, selBrushBack, gridPoint);
+					if(b != b2)
+					{
+                        PaintHexStringSelected(g, b, changedBrush, selBrushBack, gridPoint);
+                    }
+					else
+					{
+                        PaintHexStringSelected(g, b, selBrush, selBrushBack, gridPoint);
+                    }
 				}
 				else
 				{
-					PaintHexString(g, b, brush, gridPoint);
+                    if (b != b2)
+                    {
+                        PaintHexString(g, b, changedBrush, gridPoint);
+                    }
+                    else
+                    {
+                        PaintHexString(g, b, brush, gridPoint);
+                    }
 				}
 			}
 		}
@@ -2507,7 +2530,8 @@ namespace Be.Windows.Forms
 
 		void PaintHexAndStringView(Graphics g, long startByte, long endByte)
 		{
-			Brush brush = new SolidBrush(GetDefaultForeColor());
+            Brush changedBrush = new SolidBrush(_changedForeColor);
+            Brush brush = new SolidBrush(GetDefaultForeColor());
 			Brush selBrush = new SolidBrush(_selectionForeColor);
 			Brush selBrushBack = new SolidBrush(_selectionBackColor);
 
@@ -2523,19 +2547,34 @@ namespace Be.Windows.Forms
 				Point gridPoint = GetGridBytePoint(counter);
 				PointF byteStringPointF = GetByteStringPointF(gridPoint);
 				byte b = _byteProvider.ReadByte(i);
+                byte b2 = _prevByteProvider == null || _prevByteProvider.Length <= 0 ? b : _prevByteProvider.ReadByte(i);
 
-				bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
+                bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
 
-				if (isSelectedByte && isKeyInterpreterActive)
-				{
-					PaintHexStringSelected(g, b, selBrush, selBrushBack, gridPoint);
-				}
-				else
-				{
-					PaintHexString(g, b, brush, gridPoint);
-				}
+                if (isSelectedByte && isKeyInterpreterActive)
+                {
+                    if (b != b2)
+                    {
+                        PaintHexStringSelected(g, b, changedBrush, selBrushBack, gridPoint);
+                    }
+                    else
+                    {
+                        PaintHexStringSelected(g, b, selBrush, selBrushBack, gridPoint);
+                    }
+                }
+                else
+                {
+                    if (b != b2)
+                    {
+                        PaintHexString(g, b, changedBrush, gridPoint);
+                    }
+                    else
+                    {
+                        PaintHexString(g, b, brush, gridPoint);
+                    }
+                }
 
-				string s = new String(ByteCharConverter.ToChar(b), 1);
+                string s = new String(ByteCharConverter.ToChar(b), 1);
 
 				if (isSelectedByte && isStringKeyInterpreterActive)
 				{
@@ -3126,7 +3165,8 @@ namespace Be.Windows.Forms
 				if (_byteProvider != null)
 					_byteProvider.LengthChanged -= new EventHandler(_byteProvider_LengthChanged);
 
-				_byteProvider = value;
+                _prevByteProvider = _byteProvider;
+                _byteProvider = value;
 				if (_byteProvider != null)
 					_byteProvider.LengthChanged += new EventHandler(_byteProvider_LengthChanged);
 
@@ -3163,7 +3203,10 @@ namespace Be.Windows.Forms
 			}
 		}
 
-		IByteProvider _byteProvider;
+        IByteProvider _prevByteProvider;
+
+        IByteProvider _byteProvider;
+
 		/// <summary>
 		/// Gets or sets the visibility of the group separator.
 		/// </summary>
@@ -3357,11 +3400,22 @@ namespace Be.Windows.Forms
 			}
 		} long _selectionLength;
 
+        /// <summary>
+        /// Gets or sets the foreground color for the changed bytes. When this property is null, then ForeColor property is used.
+        /// </summary>
+        [DefaultValue(typeof(Color), "Red"), Category("Hex"), Description("Gets or sets the foreground color for the changed bytes. When this property is null, then ForeColor property is used.")]
+        public Color ChangedForeColor
+        {
+            get { return _changedForeColor; }
+            set { _changedForeColor = value; Invalidate(); }
+        }
+        Color _changedForeColor = Color.Red;
 
-		/// <summary>
-		/// Gets or sets the info color used for column info and line info. When this property is null, then ForeColor property is used.
-		/// </summary>
-		[DefaultValue(typeof(Color), "Gray"), Category("Hex"), Description("Gets or sets the line info color. When this property is null, then ForeColor property is used.")]
+
+        /// <summary>
+        /// Gets or sets the info color used for column info and line info. When this property is null, then ForeColor property is used.
+        /// </summary>
+        [DefaultValue(typeof(Color), "Gray"), Category("Hex"), Description("Gets or sets the line info color. When this property is null, then ForeColor property is used.")]
 		public Color InfoForeColor
 		{
 			get { return _infoForeColor; }
@@ -3510,15 +3564,6 @@ namespace Be.Windows.Forms
 				OnInsertActiveChanged(EventArgs.Empty);
 			}
 		}
-
-		/// <summary>
-		/// Gets or sets the built-in context menu.
-		/// </summary>
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public BuiltInContextMenu BuiltInContextMenu
-		{
-			get { return _builtInContextMenu; }
-		} BuiltInContextMenu _builtInContextMenu;
 
 
 		/// <summary>
