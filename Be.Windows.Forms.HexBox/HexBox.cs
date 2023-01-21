@@ -2459,7 +2459,7 @@ namespace Be.Windows.Forms
 				counter++;
 				Point gridPoint = GetGridBytePoint(counter);
 				byte b = _byteProvider.ReadByte(i);
-				byte b2 = _prevByteProvider == null || _prevByteProvider.Length <= 0 ? b : _prevByteProvider.ReadByte(i);
+				byte b2 = (_prevByteProvider == null || _prevByteProvider.Length <= 0 || i > _prevByteProvider.Length) ? b : _prevByteProvider.ReadByte(i);
 
 
                 bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
@@ -2547,7 +2547,7 @@ namespace Be.Windows.Forms
 				Point gridPoint = GetGridBytePoint(counter);
 				PointF byteStringPointF = GetByteStringPointF(gridPoint);
 				byte b = _byteProvider.ReadByte(i);
-                byte b2 = _prevByteProvider == null || _prevByteProvider.Length <= 0 ? b : _prevByteProvider.ReadByte(i);
+                byte b2 = (_prevByteProvider == null || _prevByteProvider.Length <= 0 || i > _prevByteProvider.Length) ? b : _prevByteProvider.ReadByte(i);
 
                 bool isSelectedByte = i >= _bytePos && i <= (_bytePos + _selectionLength - 1) && _selectionLength != 0;
 
